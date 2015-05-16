@@ -93,6 +93,10 @@ func (tx *tx) CreateMapReduceJobs(stmt *influxql.SelectStatement, tagKeys []stri
 			}
 		}
 
+		if len(selectFields) == 0 {
+			return nil, fmt.Errorf("select statement must include at least one field")
+		}
+
 		// If a numerical aggregate is requested, ensure it is only performed on numeric data or on a
 		// nested aggregate on numeric data.
 		for _, a := range stmt.FunctionCalls() {
@@ -143,18 +147,29 @@ func (tx *tx) CreateMapReduceJobs(stmt *influxql.SelectStatement, tagKeys []stri
 			interval = d.Nanoseconds()
 		}
 
+		selectedTagSets, err := m.tagSets(stmt, selectTags)
+		if err != nil {
+			return nil, err
+		}
+
 		// get the sorted unique tag sets for this query.
 		tagSets, err := m.tagSets(stmt, tagKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		//jobs := make([]*influxql.MapReduceJob, 0, len(tagSets))
+		var selectedTagMap map[string]string
+
+		if len(selectedTagSets) > 0 {
+			selectedTagMap = selectedTagSets[0].Tags
+		}
+
 		for _, t := range tagSets {
 			// make a job for each tagset
 			job := &influxql.MapReduceJob{
 				MeasurementName: m.Name,
 				TagSet:          t,
+				SelectedTagMap:  selectedTagMap,
 				TMin:            tmin.UnixNano(),
 				TMax:            tmax.UnixNano(),
 			}

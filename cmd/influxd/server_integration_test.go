@@ -460,10 +460,23 @@ func runTestsData(t *testing.T, testName string, nodes Cluster, database, retent
 			query:    `SELECT * FROM "%DB%"."%RP%".cpu WHERE time < NOW()`,
 			expected: `{"results":[{"series":[{"name":"cpu","columns":["time","value"],"values":[["2015-02-28T01:03:36.703820946Z",100]]}]}]}`,
 		},
+
+		// Selecting tags
 		{
-			name:     "single point, select with now(), two queries",
-			query:    `SELECT * FROM "%DB%"."%RP%".cpu WHERE time < now();SELECT * FROM "%DB%"."%RP%".cpu WHERE time < now()`,
-			expected: `{"results":[{"series":[{"name":"cpu","columns":["time","value"],"values":[["2015-02-28T01:03:36.703820946Z",100]]}]},{"series":[{"name":"cpu","columns":["time","value"],"values":[["2015-02-28T01:03:36.703820946Z",100]]}]}]}`,
+			name:     "selecting only a tag",
+			write:    `{"database" : "%DB%", "retentionPolicy" : "%RP%", "points": [{"name": "gpu", "time": "2015-02-28T01:03:36.703820946Z", "tags": {"host": "server01"}, "fields": {"value": 100, "cores": 4}}]}`,
+			query:    `SELECT host FROM "%DB%"."%RP%".gpu`,
+			expected: `{"results":[{"error":"select statement must include at least one field"}]}`,
+		},
+		{
+			name:     "selecting a tag and a field",
+			query:    `SELECT host, value FROM "%DB%"."%RP%".gpu`,
+			expected: `{"results":[{"series":[{"name":"gpu","tags":{"host":"server01"},"columns":["time","value"],"values":[["2015-02-28T01:03:36.703820946Z",100]]}]}]}`,
+		},
+		{
+			name:     "selecting a tag and two fields",
+			query:    `SELECT host, value, cores FROM "%DB%"."%RP%".gpu`,
+			expected: `{"results":[{"series":[{"name":"gpu","tags":{"host":"server01"},"columns":["time","value","cores"],"values":[["2015-02-28T01:03:36.703820946Z",100,4]]}]}]}`,
 		},
 
 		{
@@ -1579,7 +1592,7 @@ func TestServerDiags(t *testing.T) {
 }
 
 func TestSingleServer(t *testing.T) {
-	t.Skip()
+	/* t.Skip() */
 	t.Parallel()
 	testName := "single server integration"
 	if testing.Short() {
