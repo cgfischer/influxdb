@@ -51,6 +51,10 @@ type MapResponse struct {
 // Open is a no op, real work is done starting with Being
 func (m *RemoteMapper) Open() error { return nil }
 
+func (m *RemoteMapper) Tags() []string {
+	return m.SelectTags
+}
+
 // Close the response body
 func (m *RemoteMapper) Close() {
 	if m.resp != nil && m.resp.Body != nil {
